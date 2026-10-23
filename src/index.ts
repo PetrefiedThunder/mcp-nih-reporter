@@ -2,6 +2,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { buildProjectSearchCriteria } from "./project-search.js";
 
 const server = new McpServer({ name: "mcp-nih-reporter", version: "1.0.0" });
 const BASE = "https://api.reporter.nih.gov/v2";
@@ -25,13 +26,7 @@ server.tool("search_projects", "Search NIH-funded research projects", {
   limit: z.number().default(10),
   offset: z.number().default(0),
 }, async ({ query, pi_name, org_name, fiscal_years, funding_mechanism, nih_institute, limit, offset }) => {
-  const criteria: any = {};
-  if (query) criteria.advanced_text_search = { operator: "and", search_field: "projecttitle,terms", search_text: query };
-  if (pi_name) criteria.pi_names = [{ any_name: pi_name }];
-  if (org_name) criteria.org_names = [{ any_name: org_name }];
-  if (fiscal_years) criteria.fiscal_years = fiscal_years;
-  if (funding_mechanism) criteria.activity_codes = [funding_mechanism];
-  if (nih_institute) criteria.agencies = [nih_institute];
+  const criteria = buildProjectSearchCriteria({ query, pi_name, org_name, fiscal_years, funding_mechanism, nih_institute });
 
   const data = await nih("/projects/search", { criteria, limit, offset });
   const projects = (data.results || []).map((p: any) => ({
